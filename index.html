@@ -2,367 +2,1041 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0518">
   <title>E-Coupon Scanner</title>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    /* =====================================================
+       RESET & TOKENS
+       ===================================================== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-deep:   #0a0518;
+      --bg-mid:    #150a2e;
+      --bg-light:  #1e1245;
+      --violet-500: #7c3aed;
+      --violet-400: #a855f7;
+      --violet-300: #c084fc;
+      --violet-200: #e0c3ff;
+      --text:      #f5f0ff;
+      --text-dim:  #a99bcc;
+      --text-faint: #6f6396;
+      --success-1: #059669;
+      --success-2: #10b981;
+      --danger-1:  #7c3aed;
+      --danger-2:  #4c1d95;
+      --glass-bg:     rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.22, 1.4, 0.4, 1);
+    }
+
     html, body {
-      margin: 0; padding: 0;
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-      background: #0c0718;
-      color: #fff;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .screen {
-      display: none;
-      min-height: 100vh;
-      width: 100%;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      position: relative;
-    }
-    .screen.on { display: flex; }
-
-    /* ================= LANDING ================= */
-    #landingScreen {
-      background: linear-gradient(160deg, #0c0718 0%, #1a1140 100%);
-      text-align: center;
-    }
-    .brand-mark {
-      width: 96px; height: 96px;
-      border-radius: 28px;
-      background: linear-gradient(135deg, #7c3aed, #a855f7, #c084fc);
-      display: grid; place-items: center;
-      font-weight: 800; font-size: 46px;
-      color: #fff;
-      box-shadow: 0 22px 55px -22px rgba(124,58,237,.95);
-      margin-bottom: 26px;
-    }
-    #landingScreen h1 {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -.04em;
-      margin: 0 0 10px;
-    }
-    #landingScreen .tagline {
-      font-size: 15px;
-      color: #b8aee0;
-      margin: 0 0 42px;
-      max-width: 340px;
-      line-height: 1.55;
-    }
-    .btn-primary {
-      padding: 20px 56px;
-      border-radius: 18px;
-      border: none;
-      background: linear-gradient(135deg, #7c3aed, #a855f7);
-      color: #fff;
-      font-size: 18px;
-      font-weight: 750;
-      letter-spacing: -.01em;
-      cursor: pointer;
-      box-shadow: 0 20px 42px -12px rgba(124,58,237,.85);
-      transition: transform .15s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .btn-primary:active { transform: scale(.97); }
-    .btn-primary svg {
-      width: 22px; height: 22px;
-      fill: none; stroke: currentColor; stroke-width: 2;
-    }
-    .version-badge {
-      position: fixed;
-      bottom: 16px;
-      right: 16px;
-      font-size: 11px;
-      color: #8b7fc0;
-      font-family: ui-monospace, monospace;
-      padding: 6px 10px;
-      background: rgba(124,58,237,.15);
-      border-radius: 8px;
-      letter-spacing: .04em;
-    }
-
-    /* ================= SCAN ================= */
-    #scanningScreen {
-      background: #000;
-      padding: 0;
-      justify-content: flex-start;
-    }
-    .scan-header {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      padding: calc(20px + env(safe-area-inset-top)) 20px 40px;
-      background: linear-gradient(180deg, rgba(0,0,0,.8) 0%, transparent 100%);
-      z-index: 2;
-      text-align: center;
-    }
-    .scan-header h2 {
       margin: 0;
-      font-size: 16px;
-      font-weight: 650;
-      color: #fff;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .scan-header p {
-      margin: 4px 0 0;
-      font-size: 12.5px;
-      color: rgba(255,255,255,.7);
-    }
-    #video-wrap {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
+
+    /* =====================================================
+       SCREEN SYSTEM — crossfade transitions
+       ===================================================== */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.4s var(--ease-out), visibility 0s 0.4s;
       overflow: hidden;
     }
+    .screen.on {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 0.4s var(--ease-out), visibility 0s;
+    }
+
+    /* =====================================================
+       LANDING SCREEN
+       ===================================================== */
+    #landingScreen {
+      background:
+        radial-gradient(1200px 800px at 15% -10%, rgba(124,58,237,0.35), transparent 55%),
+        radial-gradient(1000px 700px at 100% 110%, rgba(168,85,247,0.28), transparent 55%),
+        linear-gradient(160deg, var(--bg-deep) 0%, var(--bg-mid) 60%, var(--bg-light) 100%);
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    /* Floating orbs */
+    #landingScreen::before,
+    #landingScreen::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(70px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    #landingScreen::before {
+      width: 320px; height: 320px;
+      top: -80px; left: -120px;
+      background: rgba(124,58,237,0.55);
+      animation: floatOrb 9s ease-in-out infinite;
+    }
+    #landingScreen::after {
+      width: 400px; height: 400px;
+      bottom: -140px; right: -140px;
+      background: rgba(168,85,247,0.42);
+      animation: floatOrb 11s ease-in-out infinite reverse;
+    }
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50%      { transform: translate(40px, -40px) scale(1.1); }
+    }
+
+    .landing-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .brand-badge {
+      width: 108px;
+      height: 108px;
+      border-radius: 32px;
+      background: linear-gradient(145deg, #7c3aed 0%, #a855f7 55%, #c084fc 100%);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      box-shadow:
+        0 30px 60px -20px rgba(124, 58, 237, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+        0 2px 0 rgba(255, 255, 255, 0.28) inset;
+      margin-bottom: 30px;
+      animation: badgeFloat 5s ease-in-out infinite;
+    }
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    .landing-title {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.1;
+      margin: 0 0 12px;
+      background: linear-gradient(135deg, #ffffff 0%, #e0c3ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .landing-subtitle {
+      font-size: 15.5px;
+      line-height: 1.55;
+      color: var(--text-dim);
+      margin: 0 0 48px;
+      max-width: 340px;
+    }
+
+    .btn-launch {
+      position: relative;
+      padding: 20px 52px;
+      border-radius: 20px;
+      border: none;
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow:
+        0 22px 46px -14px rgba(124, 58, 237, 0.95),
+        0 1px 0 rgba(255, 255, 255, 0.24) inset;
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    }
+    .btn-launch::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .btn-launch::after {
+      content: "";
+      position: absolute;
+      top: 0; left: -120%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transform: skewX(-20deg);
+      animation: buttonShine 4s ease-in-out infinite;
+    }
+    @keyframes buttonShine {
+      0%, 40%   { left: -120%; }
+      60%, 100% { left: 140%; }
+    }
+    .btn-launch:active {
+      transform: scale(0.97);
+      box-shadow:
+        0 14px 30px -12px rgba(124, 58, 237, 0.9),
+        0 1px 0 rgba(255, 255, 255, 0.24) inset;
+    }
+    .btn-launch svg {
+      width: 22px; height: 22px;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .landing-footer {
+      position: absolute;
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      z-index: 1;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-dim);
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      letter-spacing: 0.02em;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* =====================================================
+       SCANNING SCREEN
+       ===================================================== */
+    #scanningScreen {
+      background: #000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #video-wrap {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
     #video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
+      background: #000;
     }
-    #scanFrame {
+
+    /* Camera overlay gradient (vignette + top/bottom fades) */
+    #video-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(10,5,24,0.72) 0%, transparent 22%),
+        linear-gradient(0deg, rgba(10,5,24,0.85) 0%, transparent 30%),
+        radial-gradient(ellipse at center, transparent 40%, rgba(10,5,24,0.5) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Top bar */
+    .scan-top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: calc(16px + env(safe-area-inset-top)) 20px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 3;
+    }
+    .scan-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 15px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      font-size: 12.5px;
+      font-weight: 650;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+    .scan-status-pill .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--violet-300);
+      box-shadow: 0 0 10px var(--violet-300);
+      animation: pulseDot 1.6s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.35); opacity: 0.65; }
+    }
+    .scan-status-pill.warn {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+    }
+    .scan-status-pill.warn .pulse-dot {
+      background: #fbbf24;
+      box-shadow: 0 0 10px #fbbf24;
+    }
+
+    .scan-brand-mini {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #7c3aed, #a855f7);
+      display: grid; place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 18px;
+      box-shadow:
+        0 8px 20px -6px rgba(124, 58, 237, 0.7),
+        0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    }
+
+    /* Scan frame */
+    .scan-frame {
       position: absolute;
       top: 50%; left: 50%;
-      width: 70vw;
-      max-width: 320px;
+      width: min(72vw, 320px);
       aspect-ratio: 1;
       transform: translate(-50%, -50%);
+      z-index: 2;
       pointer-events: none;
     }
-    #scanFrame::before, #scanFrame::after,
-    #scanFrame span::before, #scanFrame span::after {
-      content: ""; position: absolute;
-      width: 40px; height: 40px;
-      border: 4px solid #c084fc;
-      filter: drop-shadow(0 0 10px rgba(192,132,252,.9));
-    }
-    #scanFrame::before { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 12px; }
-    #scanFrame::after  { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 12px; }
-    #scanFrame span::before { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 12px; }
-    #scanFrame span::after  { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 12px; }
-    .scan-footer {
+
+    .scan-frame .corner {
       position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
-      background: linear-gradient(0deg, rgba(0,0,0,.8) 0%, transparent 100%);
-      z-index: 2;
-      display: flex;
-      justify-content: center;
+      width: 44px; height: 44px;
+      border: 3.5px solid var(--violet-300);
+      filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.85));
+      animation: cornerPulse 2.2s ease-in-out infinite;
     }
-    .btn-stop {
-      padding: 14px 32px;
-      border-radius: 14px;
-      border: 1.5px solid rgba(255,255,255,.3);
-      background: rgba(255,255,255,.12);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 650;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+    @keyframes cornerPulse {
+      0%, 100% { border-color: var(--violet-300); opacity: 1; }
+      50%      { border-color: var(--violet-200); opacity: 0.75; }
     }
-    #scanDebug {
+    .scan-frame .corner.tl {
+      top: 0; left: 0;
+      border-right: none; border-bottom: none;
+      border-top-left-radius: 16px;
+    }
+    .scan-frame .corner.tr {
+      top: 0; right: 0;
+      border-left: none; border-bottom: none;
+      border-top-right-radius: 16px;
+    }
+    .scan-frame .corner.bl {
+      bottom: 0; left: 0;
+      border-right: none; border-top: none;
+      border-bottom-left-radius: 16px;
+    }
+    .scan-frame .corner.br {
+      bottom: 0; right: 0;
+      border-left: none; border-top: none;
+      border-bottom-right-radius: 16px;
+    }
+
+    /* Animated scan line */
+    .scan-line {
       position: absolute;
-      top: calc(110px + env(safe-area-inset-top));
+      left: 8px; right: 8px;
+      height: 2.5px;
+      background: linear-gradient(90deg, transparent 0%, var(--violet-300) 20%, #ffffff 50%, var(--violet-300) 80%, transparent 100%);
+      border-radius: 4px;
+      box-shadow:
+        0 0 18px 3px rgba(192, 132, 252, 0.9),
+        0 0 40px 6px rgba(168, 85, 247, 0.5);
+      animation: scanLine 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+    @keyframes scanLine {
+      0%   { top: 12px; opacity: 0; }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { top: calc(100% - 14px); opacity: 0; }
+    }
+
+    /* Instruction text */
+    .scan-instruction {
+      position: absolute;
+      top: calc(50% + min(36vw, 168px) + 24px);
       left: 50%;
       transform: translateX(-50%);
-      font-size: 10px;
-      color: rgba(192,132,252,.75);
-      font-family: ui-monospace, monospace;
-      max-width: 90vw;
       text-align: center;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45;
       z-index: 2;
+      max-width: 300px;
+      animation: fadeInUp 0.6s var(--ease-out) 0.2s both;
+    }
+    .scan-instruction small {
+      display: block;
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translate(-50%, 8px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    /* Bottom dock */
+    .scan-dock {
+      position: absolute;
+      bottom: calc(32px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 10px 20px;
+      border-radius: 100px;
+      background: rgba(20, 12, 45, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      box-shadow: 0 20px 50px -18px rgba(0, 0, 0, 0.85);
+      z-index: 3;
+    }
+
+    .dock-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 0.18s var(--ease-out), background 0.18s;
+    }
+    .dock-btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.16); }
+    .dock-btn svg {
+      width: 22px; height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .dock-btn.active {
+      background: var(--violet-500);
+      border-color: var(--violet-400);
+      box-shadow: 0 0 20px rgba(124, 58, 237, 0.6);
+    }
+
+    .dock-btn-stop {
+      width: 68px; height: 68px;
+      background: linear-gradient(145deg, #7c3aed 0%, #a855f7 100%);
+      border: none;
+      box-shadow:
+        0 12px 32px -8px rgba(124, 58, 237, 0.85),
+        0 1px 0 rgba(255, 255, 255, 0.22) inset;
+    }
+    .dock-btn-stop svg { width: 26px; height: 26px; }
+    .dock-btn-stop:active {
+      transform: scale(0.92);
+      box-shadow: 0 6px 20px -6px rgba(124, 58, 237, 0.9);
+    }
+
+    /* Camera loading state */
+    .scan-loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 1;
+      background: linear-gradient(160deg, var(--bg-deep), var(--bg-mid));
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .scan-loading.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .scan-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(168, 85, 247, 0.2);
+      border-top-color: var(--violet-400);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .scan-loading p {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    /* =====================================================
+       RESULT SCREEN
+       ===================================================== */
+    #resultScreen {
+      padding: 32px 24px;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow-y: auto;
+    }
+    #resultScreen.ok {
+      background:
+        radial-gradient(800px 600px at 50% 0%, rgba(16, 185, 129, 0.4), transparent 60%),
+        linear-gradient(160deg, #064e3b 0%, #059669 50%, #10b981 100%);
+    }
+    #resultScreen.err {
+      background:
+        radial-gradient(800px 600px at 50% 0%, rgba(124, 58, 237, 0.45), transparent 60%),
+        linear-gradient(160deg, #2e1065 0%, #4c1d95 50%, #7c3aed 100%);
+    }
+    #resultScreen.pending {
+      background:
+        radial-gradient(800px 600px at 50% 0%, rgba(168, 85, 247, 0.35), transparent 60%),
+        linear-gradient(160deg, #1a1140 0%, #2e1a5e 50%, #4c1d95 100%);
+    }
+
+    /* Confetti (success only) */
+    .confetti {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .confetti span {
+      position: absolute;
+      width: 8px;
+      height: 12px;
+      top: -20px;
+      border-radius: 2px;
+      opacity: 0;
+      animation: confettiFall 3.5s ease-in infinite;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+    }
+
+    .result-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 380px;
+      width: 100%;
+    }
+
+    /* Icon container */
+    .result-icon-wrap {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      display: grid;
+      place-items: center;
+    }
+    .result-icon-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -16px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 70%);
+      animation: glowPulse 1.8s ease-in-out infinite;
       pointer-events: none;
     }
+    @keyframes glowPulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50%      { transform: scale(1.18); opacity: 0.9; }
+    }
 
-    /* ================= RESULT ================= */
-    #resultScreen {
-      text-align: center;
-      padding: 28px;
-    }
-    #resultScreen.ok  { background: linear-gradient(160deg, #059669, #10b981); }
-    #resultScreen.err { background: linear-gradient(160deg, #7c3aed, #4c1d95); }
-
-    .result-ico {
-      width: 120px; height: 120px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.22);
-      display: grid; place-items: center;
-      font-size: 60px; color: #fff;
-      animation: popIn .5s cubic-bezier(.22,1.4,.4,1);
-    }
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(.5); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-    .result-title {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -.03em;
-      margin-top: 22px;
-      color: #fff;
-    }
-    .result-msg {
-      font-size: 15px;
-      color: rgba(255,255,255,.92);
-      max-width: 340px;
-      line-height: 1.55;
-      margin-top: 8px;
-    }
-    .result-card {
-      background: rgba(255,255,255,.18);
-      border: 1px solid rgba(255,255,255,.28);
-      border-radius: 22px;
-      padding: 20px 26px;
+    .result-icon {
       width: 100%;
-      max-width: 340px;
-      margin-top: 24px;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      display: grid;
+      place-items: center;
       color: #fff;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.4);
+      animation: iconPop 0.55s var(--ease-spring);
     }
-    .result-card .amt { font-size: 38px; font-weight: 800; letter-spacing: -.04em; }
-    .result-card .nm  { font-size: 15px; font-weight: 650; margin-top: 4px; }
-    .result-card .rs  { font-size: 13px; opacity: .85; margin-top: 2px; }
-    .result-card .meta {
+    @keyframes iconPop {
+      0%   { transform: scale(0.3); opacity: 0; }
+      60%  { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result-icon svg { width: 68px; height: 68px; }
+
+    /* Draw-animated checkmark */
+    .draw-circle {
+      stroke-dasharray: 166;
+      stroke-dashoffset: 166;
+      animation: drawCircle 0.6s var(--ease-out) 0.1s forwards;
+    }
+    .draw-check {
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      animation: drawCheck 0.4s var(--ease-out) 0.55s forwards;
+    }
+    @keyframes drawCircle { to { stroke-dashoffset: 0; } }
+    @keyframes drawCheck  { to { stroke-dashoffset: 0; } }
+
+    /* Draw-animated X */
+    .draw-x {
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: drawCheck 0.35s var(--ease-out) 0.55s forwards;
+    }
+
+    .result-title {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.1;
+      margin: 28px 0 10px;
+      color: #fff;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.25);
+      animation: slideUp 0.5s var(--ease-out) 0.25s both;
+    }
+
+    .result-message {
+      font-size: 15.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 340px;
+      margin: 0 0 28px;
+      animation: slideUp 0.5s var(--ease-out) 0.35s both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Coupon detail card */
+    .result-card {
+      width: 100%;
+      max-width: 360px;
+      padding: 22px 24px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      color: #fff;
+      box-shadow:
+        0 20px 44px -16px rgba(0, 0, 0, 0.35),
+        0 1px 0 rgba(255, 255, 255, 0.2) inset;
+      animation: slideUp 0.5s var(--ease-out) 0.45s both;
+      text-align: left;
+    }
+
+    .result-card .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .result-card .card-amount {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      line-height: 1;
+      display: flex;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .result-card .card-amount .currency {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+
+    .result-card .card-status {
+      padding: 5px 11px;
+      border-radius: 100px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      white-space: nowrap;
+      margin-top: 4px;
+    }
+
+    .result-card .card-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-top: 14px;
+    }
+    .result-card .card-reason {
+      font-size: 13.5px;
+      opacity: 0.85;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    .result-card .card-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.18);
+      margin: 16px 0 14px;
+    }
+
+    .result-card .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
       font-size: 11px;
-      opacity: .7;
-      margin-top: 10px;
-      font-family: ui-monospace, monospace;
+      letter-spacing: 0.02em;
+      opacity: 0.78;
       word-break: break-all;
       line-height: 1.4;
     }
+    .result-card .card-meta svg {
+      width: 13px; height: 13px;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    /* Action buttons */
     .result-actions {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 28px;
       width: 100%;
-      max-width: 340px;
+      max-width: 360px;
+      margin-top: 28px;
+      animation: slideUp 0.5s var(--ease-out) 0.55s both;
     }
-    .btn-white {
+
+    .btn-result-primary {
+      position: relative;
+      padding: 18px 32px;
+      border-radius: 18px;
+      border: none;
+      background: #ffffff;
+      color: #1a1140;
+      font-size: 16.5px;
+      font-weight: 750;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow:
+        0 18px 40px -12px rgba(0, 0, 0, 0.35),
+        0 1px 0 rgba(255, 255, 255, 0.85) inset;
+      transition: transform 0.2s var(--ease-out);
+    }
+    .btn-result-primary:active {
+      transform: scale(0.97);
+    }
+    .btn-result-primary svg {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .btn-result-secondary {
       padding: 16px 32px;
       border-radius: 16px;
-      border: none;
-      background: #fff;
-      color: #1a1140;
-      font-size: 16px;
-      font-weight: 750;
-      cursor: pointer;
-      box-shadow: 0 12px 30px -10px rgba(0,0,0,.4);
-      transition: transform .15s ease;
-    }
-    .btn-white:active { transform: scale(.97); }
-    .btn-ghost-white {
-      padding: 14px 32px;
-      border-radius: 14px;
-      border: 1.5px solid rgba(255,255,255,.4);
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
       background: transparent;
       color: #fff;
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 650;
       cursor: pointer;
+      transition: transform 0.2s var(--ease-out), background 0.2s;
+    }
+    .btn-result-secondary:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: calc(120px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      padding: 12px 20px;
+      background: rgba(20, 12, 45, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s var(--ease-out);
+      z-index: 9999;
+      white-space: nowrap;
+    }
+    .toast.on {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
 
-<!-- ========== SCREEN 1: LANDING ========== -->
+<!-- ========== LANDING ========== -->
 <div id="landingScreen" class="screen on">
-  <div class="brand-mark">E</div>
-  <h1>E-Coupon Scanner</h1>
-  <p class="tagline">Scan customer QR codes to redeem coupons instantly. Each coupon can only be used once.</p>
-  <button class="btn-primary" id="startBtn">
-    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-    Open Scanner
-  </button>
-  <div class="version-badge">v3.1 · Nov 2026</div>
+  <div class="landing-content">
+    <div class="brand-badge">E</div>
+    <h1 class="landing-title">E-Coupon Scanner</h1>
+    <p class="landing-subtitle">Scan customer QR codes to redeem coupons instantly. Each code can only be used once.</p>
+    <button class="btn-launch" id="startBtn">
+      <svg viewBox="0 0 24 24">
+        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Open Scanner
+    </button>
+  </div>
+  <div class="landing-footer">
+    <span class="pill"><span class="dot"></span>Ready</span>
+    <span class="pill">v4.0</span>
+  </div>
 </div>
 
-<!-- ========== SCREEN 2: SCANNING (id fixed to match code) ========== -->
+<!-- ========== SCANNING ========== -->
 <div id="scanningScreen" class="screen">
-  <div class="scan-header">
-    <h2>Scanning Coupon</h2>
-    <p>Point the camera at the QR code</p>
-  </div>
   <div id="video-wrap">
     <video id="video" playsinline muted autoplay></video>
-    <div id="scanFrame"><span></span></div>
+
+    <div class="scan-loading" id="scanLoading">
+      <div style="text-align: center;">
+        <div class="scan-spinner"></div>
+        <p>Starting camera…</p>
+      </div>
+    </div>
+
+    <div class="scan-frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scan-line"></div>
+    </div>
+
+    <div class="scan-instruction">
+      Align the QR within the frame
+      <small>Scanning happens automatically</small>
+    </div>
   </div>
-  <div id="scanDebug"></div>
-  <div class="scan-footer">
-    <button class="btn-stop" id="stopBtn">✕ Stop</button>
+
+  <div class="scan-top">
+    <div class="scan-status-pill" id="scanStatusPill">
+      <span class="pulse-dot"></span>
+      <span id="scanStatusText">Scanning</span>
+    </div>
+    <div class="scan-brand-mini">E</div>
+  </div>
+
+  <div class="scan-dock">
+    <button class="dock-btn" id="torchBtn" style="display: none;" aria-label="Toggle flashlight">
+      <svg viewBox="0 0 24 24">
+        <path d="M9 2h6l-1 6h-4L9 2z"/>
+        <path d="M10 8h4v3l-1 2h-2l-1-2V8z"/>
+        <path d="M11 13v9M13 13v9"/>
+      </svg>
+    </button>
+    <button class="dock-btn dock-btn-stop" id="stopBtn" aria-label="Stop scanning">
+      <svg viewBox="0 0 24 24">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+    <button class="dock-btn" id="flipBtn" style="display: none;" aria-label="Flip camera">
+      <svg viewBox="0 0 24 24">
+        <path d="M20 8a8 8 0 00-14.5 3M4 16a8 8 0 0014.5-3"/>
+        <path d="M20 3v5h-5M4 21v-5h5"/>
+      </svg>
+    </button>
   </div>
 </div>
 
-<!-- ========== SCREEN 3: RESULT ========== -->
+<!-- ========== RESULT ========== -->
 <div id="resultScreen" class="screen">
-  <div class="result-ico" id="resultIco">✓</div>
-  <div class="result-title" id="resultTitle">Redeemed!</div>
-  <div class="result-msg" id="resultMsg">Coupon marked as used.</div>
-  <div class="result-card" id="resultCard">
-    <div class="amt" id="resultAmt">$0</div>
-    <div class="nm" id="resultName"></div>
-    <div class="rs" id="resultReason"></div>
-    <div class="meta" id="resultMeta"></div>
-  </div>
-  <div class="result-actions">
-    <button class="btn-white" id="scanNextBtn">📷 Scan Next Coupon</button>
-    <button class="btn-ghost-white" id="doneBtn">Back to Home</button>
+  <div class="confetti" id="confetti"></div>
+  <div class="result-content">
+    <div class="result-icon-wrap">
+      <div class="result-icon" id="resultIcon"></div>
+    </div>
+    <h2 class="result-title" id="resultTitle">Redeemed!</h2>
+    <p class="result-message" id="resultMessage"></p>
+
+    <div class="result-card" id="resultCard" style="display: none;">
+      <div class="card-row">
+        <div class="card-amount">
+          <span class="currency">$</span><span id="resultAmount">0</span>
+        </div>
+        <div class="card-status" id="resultStatus">Active</div>
+      </div>
+      <div class="card-name" id="resultName"></div>
+      <div class="card-reason" id="resultReason"></div>
+      <div class="card-divider"></div>
+      <div class="card-meta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span id="resultMeta"></span>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-result-primary" id="scanNextBtn">
+        <svg viewBox="0 0 24 24">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Scan Next Coupon
+      </button>
+      <button class="btn-result-secondary" id="doneBtn">Back to Home</button>
+    </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 // ================================================================
-// ⚠️ CONFIG — must match Code.gs
+// ⚠️ CONFIG
 // ================================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/thebigcarrot.ca/s/AKfycbyNfMFI5Oims_2q5NIlIyFZtxiQryu2nkdT9Hw3D995sQ74yN0Gjk3NqOdiWeUrSanfcA/exec';
-const API_SECRET      = 'ecp-live-9f4K2pQ8xW7nH3jM5tR6vY1bL0dN4sA';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+const API_SECRET      = 'CHANGE_ME_TO_A_LONG_RANDOM_STRING_2024';
 // ================================================================
 
-const video        = document.getElementById('video');
-const scanDebug    = document.getElementById('scanDebug');
-const resultScreen = document.getElementById('resultScreen');
-const resultIco    = document.getElementById('resultIco');
-const resultTitle  = document.getElementById('resultTitle');
-const resultMsg    = document.getElementById('resultMsg');
-const resultCard   = document.getElementById('resultCard');
-const resultAmt    = document.getElementById('resultAmt');
-const resultName   = document.getElementById('resultName');
-const resultReason = document.getElementById('resultReason');
-const resultMeta   = document.getElementById('resultMeta');
+const $ = id => document.getElementById(id);
 
-let appState        = 'landing';
-let cameraStream    = null;
-let scanLoopId      = null;
+const video        = $('video');
+const scanLoading  = $('scanLoading');
+const scanStatusPill = $('scanStatusPill');
+const scanStatusText = $('scanStatusText');
+const resultScreen = $('resultScreen');
+const resultIcon   = $('resultIcon');
+const resultTitle  = $('resultTitle');
+const resultMessage = $('resultMessage');
+const resultCard   = $('resultCard');
+const resultAmount = $('resultAmount');
+const resultName   = $('resultName');
+const resultReason = $('resultReason');
+const resultStatus = $('resultStatus');
+const resultMeta   = $('resultMeta');
+const confettiEl   = $('confetti');
+const torchBtn     = $('torchBtn');
+const flipBtn      = $('flipBtn');
+const toastEl      = $('toast');
+
+let appState = 'landing';
+let cameraStream = null;
+let scanLoopId = null;
 let barcodeDetector = null;
-let canvas          = null;
-let ctx             = null;
+let canvas = null;
+let ctx = null;
+let currentFacing = 'environment';
+let torchOn = false;
 
-function debug(msg) {
-  scanDebug.textContent = msg ? String(msg).slice(0, 150) : '';
-  if (msg) console.log('[ECP]', msg);
+// ================================================================
+// HELPERS
+// ================================================================
+function money(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastEl._timer);
+  toastEl._timer = setTimeout(() => toastEl.classList.remove('on'), 2200);
 }
 
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
-  const el = document.getElementById(name + 'Screen');
-  if (!el) {
-    console.error('[ECP] Screen element not found:', name + 'Screen');
-    return;
-  }
+  const el = $(name + 'Screen');
+  if (!el) { console.error('[ECP] No screen:', name); return; }
   el.classList.add('on');
   appState = name;
-  window.scrollTo(0, 0);
-}
-
-function money(n) {
-  const v = Number(n) || 0;
-  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 // ================================================================
@@ -371,11 +1045,13 @@ function money(n) {
 async function openCamera() {
   if (cameraStream) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Camera not supported. Use HTTPS in Safari or Chrome.');
+    throw new Error('Camera not supported. Open this page over HTTPS in Safari or Chrome.');
   }
+  scanLoading.classList.remove('hidden');
+
   cameraStream = await navigator.mediaDevices.getUserMedia({
     video: {
-      facingMode: { ideal: 'environment' },
+      facingMode: { ideal: currentFacing },
       width:  { ideal: 1280 },
       height: { ideal: 1280 }
     },
@@ -383,6 +1059,9 @@ async function openCamera() {
   });
   video.srcObject = cameraStream;
   await video.play();
+
+  scanLoading.classList.add('hidden');
+  updateCameraControls();
 }
 
 function closeCamera() {
@@ -391,6 +1070,52 @@ function closeCamera() {
     cameraStream = null;
   }
   video.srcObject = null;
+  torchOn = false;
+  torchBtn.classList.remove('active');
+}
+
+async function updateCameraControls() {
+  if (!cameraStream) return;
+  const track = cameraStream.getVideoTracks()[0];
+  const caps  = track.getCapabilities ? track.getCapabilities() : {};
+
+  // Torch
+  torchBtn.style.display = caps.torch ? 'grid' : 'none';
+
+  // Flip
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    flipBtn.style.display = cams.length > 1 ? 'grid' : 'none';
+  } catch (e) {
+    flipBtn.style.display = 'none';
+  }
+}
+
+async function toggleTorch() {
+  if (!cameraStream) return;
+  const track = cameraStream.getVideoTracks()[0];
+  try {
+    torchOn = !torchOn;
+    await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+    torchBtn.classList.toggle('active', torchOn);
+  } catch (e) {
+    torchOn = false;
+    torchBtn.classList.remove('active');
+    showToast('Flashlight not available');
+  }
+}
+
+async function flipCamera() {
+  cancelScanLoop();
+  closeCamera();
+  currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
+  try {
+    await openCamera();
+    startScanLoop();
+  } catch (e) {
+    showToast('Could not switch camera');
+  }
 }
 
 // ================================================================
@@ -409,11 +1134,9 @@ async function startScanLoop() {
       const fmts = await BarcodeDetector.getSupportedFormats();
       if (fmts.includes('qr_code')) {
         barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-        debug('BarcodeDetector active');
       }
-    } catch (e) { /* fallback */ }
+    } catch (e) { /* jsQR fallback */ }
   }
-  if (!barcodeDetector) debug('jsQR mode');
 
   cancelScanLoop();
 
@@ -430,11 +1153,11 @@ async function startScanLoop() {
           }
         }
         if (!code) {
-          canvas.width  = video.videoWidth;
+          canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const qr  = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+          const qr = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
           if (qr && qr.data) code = qr.data;
         }
       } catch (e) { /* ignore */ }
@@ -443,8 +1166,7 @@ async function startScanLoop() {
 
       if (code && code.indexOf('ECP-') === 0) {
         cancelScanLoop();
-        if (navigator.vibrate) navigator.vibrate(80);
-        debug('Found: ' + code);
+        if (navigator.vibrate) navigator.vibrate(60);
         redeemAndShowResult(code.trim());
         return;
       }
@@ -466,31 +1188,30 @@ function cancelScanLoop() {
 }
 
 // ================================================================
-// FLOW: LANDING → SCANNING
+// FLOW
 // ================================================================
-document.getElementById('startBtn').addEventListener('click', async () => {
+$('startBtn').addEventListener('click', async () => {
   try {
     switchScreen('scanning');
     await openCamera();
     startScanLoop();
   } catch (err) {
-    console.error('[ECP] Camera error:', err);
     cancelScanLoop();
     closeCamera();
     switchScreen('landing');
     alert('Could not open camera.\n\n' + (err.message || err.name || 'Unknown error') +
-          '\n\nPlease make sure:\n• You granted camera permission\n• You are on HTTPS (github.io)\n• Your browser supports camera access');
+          '\n\nPlease ensure:\n• Camera permission is granted\n• You are on HTTPS (github.io)\n• Browser supports camera access');
   }
 });
 
-// ================================================================
-// FLOW: SCANNING → LANDING (Stop)
-// ================================================================
-document.getElementById('stopBtn').addEventListener('click', () => {
+$('stopBtn').addEventListener('click', () => {
   cancelScanLoop();
   closeCamera();
   switchScreen('landing');
 });
+
+$('torchBtn').addEventListener('click', toggleTorch);
+$('flipBtn').addEventListener('click', flipCamera);
 
 // ================================================================
 // JSONP API
@@ -522,11 +1243,11 @@ function jsonpRedeem(token) {
     };
 
     const s = document.createElement('script');
-    s.id  = cbName + '_s';
+    s.id = cbName + '_s';
     s.src = APPS_SCRIPT_URL +
       '?action=redeem' +
-      '&token='    + encodeURIComponent(token) +
-      '&secret='   + encodeURIComponent(API_SECRET) +
+      '&token=' + encodeURIComponent(token) +
+      '&secret=' + encodeURIComponent(API_SECRET) +
       '&device=github-scanner' +
       '&callback=' + cbName +
       '&_=' + Date.now();
@@ -546,93 +1267,141 @@ function jsonpRedeem(token) {
 // REDEEM → RESULT
 // ================================================================
 async function redeemAndShowResult(token) {
-  // Switch to result screen IMMEDIATELY (before network call)
-  resultScreen.classList.remove('ok', 'err');
-  resultScreen.classList.add('ok');
-  resultIco.textContent    = '⏳';
-  resultTitle.textContent  = 'Checking…';
-  resultMsg.textContent    = 'Verifying coupon with server';
-  resultCard.style.display = 'none';
+  // Show pending state immediately
+  renderPendingState();
   switchScreen('result');
 
   try {
     const data = await jsonpRedeem(token);
 
     if (data.ok) {
-      showResult('ok', '✓', 'Redeemed!',
-        'Coupon marked as used. It cannot be reused.',
-        data.coupon, '');
+      renderSuccess(data.coupon);
     } else if (data.code === 'ALREADY_USED') {
-      showResult('err', '✕', 'Already Redeemed',
-        'This coupon has already been used. Do not accept it again.',
-        data.coupon,
-        data.coupon && data.coupon.redeemedAt
-          ? 'Redeemed: ' + new Date(data.coupon.redeemedAt).toLocaleString('en-US')
+      renderError('Already Redeemed', 'This coupon has already been used. Do not accept it again.',
+        data.coupon, data.coupon && data.coupon.redeemedAt
+          ? 'Used: ' + new Date(data.coupon.redeemedAt).toLocaleString('en-US')
           : '');
     } else if (data.code === 'EXPIRED') {
-      showResult('err', '✕', 'Coupon Expired',
-        data.message || 'This coupon is past its expiry date.',
-        data.coupon,
-        data.coupon && data.coupon.expiresAt
+      renderError('Coupon Expired', data.message || 'This coupon is past its expiry date.',
+        data.coupon, data.coupon && data.coupon.expiresAt
           ? 'Expired: ' + new Date(data.coupon.expiresAt).toLocaleDateString('en-US')
           : '');
     } else if (data.code === 'VOID') {
-      showResult('err', '✕', 'Coupon Cancelled',
-        'This coupon has been voided by an administrator.',
+      renderError('Coupon Cancelled', 'This coupon has been voided by an administrator.',
         data.coupon, '');
     } else if (data.code === 'UNAUTHORIZED') {
-      showResult('err', '⚠', 'Server Rejected',
-        'API secret does not match. Check configuration.', null, '');
+      renderError('Server Rejected', 'API secret does not match. Check configuration.', null, '');
     } else {
-      showResult('err', '✕', 'Invalid Coupon',
-        data.message || 'This coupon was not recognized.',
+      renderError('Invalid Coupon', data.message || 'This coupon was not recognized.',
         data.coupon, '');
     }
   } catch (err) {
     if (err.message === 'TIMEOUT') {
-      showResult('err', '⚠', 'Server Timeout',
-        'The server did not respond. Check connection and try again.', null, '');
+      renderError('Server Timeout', 'The server did not respond. Check connection and try again.', null, '');
     } else {
-      showResult('err', '⚠', 'Network Error',
-        'Could not reach the server. Verify the scanner URL.', null, '');
+      renderError('Network Error', 'Could not reach the server. Verify the scanner URL.', null, '');
     }
   }
 }
 
-function showResult(type, icon, title, msg, coupon, meta) {
-  resultScreen.classList.remove('ok', 'err');
-  resultScreen.classList.add(type === 'ok' ? 'ok' : 'err');
+// ================================================================
+// RENDER STATES
+// ================================================================
+function resetResultScreen() {
+  resultScreen.classList.remove('ok', 'err', 'pending');
+  confettiEl.innerHTML = '';
+}
 
-  resultIco.textContent    = icon;
-  resultTitle.textContent  = title;
-  resultMsg.textContent    = msg || '';
+function renderPendingState() {
+  resetResultScreen();
+  resultScreen.classList.add('pending');
+  resultIcon.innerHTML = '<div class="scan-spinner"></div>';
+  resultTitle.textContent = 'Checking…';
+  resultMessage.textContent = 'Verifying coupon with server';
+  resultCard.style.display = 'none';
+}
+
+function renderSuccess(coupon) {
+  resetResultScreen();
+  resultScreen.classList.add('ok');
+
+  resultIcon.innerHTML = `
+    <svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <circle class="draw-circle" cx="26" cy="26" r="24"/>
+      <path class="draw-check" d="M14 27l8 8 16-16"/>
+    </svg>`;
+
+  resultTitle.textContent = 'Redeemed!';
+  resultMessage.textContent = 'Coupon marked as used. It cannot be reused.';
 
   if (coupon) {
     resultCard.style.display = 'block';
-    resultAmt.textContent    = money(coupon.amount);
-    resultName.textContent   = coupon.name || '';
+    resultAmount.textContent = money(coupon.amount);
+    resultName.textContent = coupon.name || '';
     resultReason.textContent = coupon.reason || '';
-    resultMeta.textContent   = meta || coupon.token || '';
+    resultStatus.textContent = 'Redeemed';
+    resultMeta.textContent = coupon.token || '';
+  }
+
+  spawnConfetti();
+
+  if (navigator.vibrate) navigator.vibrate(200);
+}
+
+function renderError(title, msg, coupon, meta) {
+  resetResultScreen();
+  resultScreen.classList.add('err');
+
+  resultIcon.innerHTML = `
+    <svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle class="draw-circle" cx="26" cy="26" r="24"/>
+      <path class="draw-x" d="M16 16l20 20"/>
+      <path class="draw-x" d="M36 16l-20 20"/>
+    </svg>`;
+
+  resultTitle.textContent = title;
+  resultMessage.textContent = msg || '';
+
+  if (coupon) {
+    resultCard.style.display = 'block';
+    resultAmount.textContent = money(coupon.amount);
+    resultName.textContent = coupon.name || '';
+    resultReason.textContent = coupon.reason || '';
+    resultStatus.textContent = coupon.status || '';
+    resultMeta.textContent = meta || coupon.token || '';
   } else {
     resultCard.style.display = 'none';
   }
 
-  if (navigator.vibrate) {
-    navigator.vibrate(type === 'ok' ? 200 : [100, 50, 100]);
+  if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
+}
+
+function spawnConfetti() {
+  confettiEl.innerHTML = '';
+  const colors = ['#a855f7', '#c084fc', '#e0c3ff', '#ffffff', '#fbbf24', '#34d399'];
+  const count = 30;
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('span');
+    dot.style.left = Math.random() * 100 + '%';
+    dot.style.background = colors[Math.floor(Math.random() * colors.length)];
+    dot.style.animationDelay = (Math.random() * 1.5) + 's';
+    dot.style.animationDuration = (2.5 + Math.random() * 1.5) + 's';
+    dot.style.width = (4 + Math.random() * 6) + 'px';
+    dot.style.height = (6 + Math.random() * 8) + 'px';
+    confettiEl.appendChild(dot);
   }
 }
 
 // ================================================================
-// RESULT → SCANNING (Scan Next)
+// RESULT → NEXT
 // ================================================================
-document.getElementById('scanNextBtn').addEventListener('click', async () => {
+$('scanNextBtn').addEventListener('click', async () => {
   try {
-    resultScreen.classList.remove('ok', 'err');
+    resetResultScreen();
     switchScreen('scanning');
     await openCamera();
     startScanLoop();
   } catch (err) {
-    console.error('[ECP] Camera error:', err);
     cancelScanLoop();
     closeCamera();
     switchScreen('landing');
@@ -640,11 +1409,8 @@ document.getElementById('scanNextBtn').addEventListener('click', async () => {
   }
 });
 
-// ================================================================
-// RESULT → LANDING (Done)
-// ================================================================
-document.getElementById('doneBtn').addEventListener('click', () => {
-  resultScreen.classList.remove('ok', 'err');
+$('doneBtn').addEventListener('click', () => {
+  resetResultScreen();
   closeCamera();
   switchScreen('landing');
 });
