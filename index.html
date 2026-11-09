@@ -14,8 +14,13 @@
       padding:16px;
     }
     h2{margin:0 0 14px;font-size:20px;letter-spacing:-.02em}
+
+    /* ---- SCANNER STAGE ---- */
+    #stage{
+      width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;
+    }
     #video-wrap{
-      position:relative;width:100%;max-width:440px;
+      position:relative;width:100%;
       aspect-ratio:3/4;border-radius:24px;overflow:hidden;
       background:#1a1140;
       box-shadow:0 24px 50px -22px rgba(124,58,237,.65);
@@ -31,61 +36,133 @@
     #overlay::after {top:14%;right:14%;border-left:none;border-bottom:none;border-top-right-radius:10px}
     #overlay span::before{bottom:14%;left:14%;border-right:none;border-top:none;border-bottom-left-radius:10px}
     #overlay span::after {bottom:14%;right:14%;border-left:none;border-top:none;border-bottom-right-radius:10px}
+
     #message{
-      margin-top:16px;font-size:16px;font-weight:600;
-      text-align:center;min-height:22px;padding:0 10px;
+      margin-top:14px;font-size:15px;font-weight:600;
+      text-align:center;min-height:20px;padding:0 10px;
     }
     .success{color:#10b981}
     .error  {color:#f87171}
     .info   {color:#c084fc}
     #status{
-      margin-top:8px;font-size:12.5px;color:#9d94c4;
+      margin-top:6px;font-size:12.5px;color:#9d94c4;
       text-align:center;max-width:400px;line-height:1.5;
     }
     #debug{
-      margin-top:12px;font-size:10px;color:#6f5fa8;
+      margin-top:10px;font-size:10px;color:#6f5fa8;
       font-family:monospace;text-align:center;
       max-width:400px;word-break:break-all;
     }
-    #result{
-      margin-top:16px;padding:16px 22px;border-radius:16px;
-      background:rgba(124,58,237,.18);border:1px solid rgba(168,85,247,.35);
-      max-width:400px;width:100%;display:none;
+
+    /* ---- RESULT SCREEN ---- */
+    #resultScreen{
+      position:fixed;inset:0;z-index:100;
+      display:none;flex-direction:column;align-items:center;justify-content:center;
+      padding:28px;text-align:center;
+      animation:fadeIn .25s ease;
     }
-    #result .amt{font-size:32px;font-weight:800;letter-spacing:-.04em}
-    #result .nm{font-size:14px;font-weight:650;margin-top:2px}
-    #result .rs{font-size:12.5px;opacity:.8;margin-top:2px}
+    #resultScreen.on{display:flex}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+    #resultScreen.ok  { background:linear-gradient(160deg,#059669,#10b981); }
+    #resultScreen.err { background:linear-gradient(160deg,#7c3aed,#4c1d95); }
+
+    .result-ico{
+      width:110px;height:110px;border-radius:50%;
+      background:rgba(255,255,255,.22);
+      display:grid;place-items:center;
+      font-size:56px;color:#fff;
+      animation:popIn .45s cubic-bezier(.22,1.4,.4,1);
+    }
+    @keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+
+    .result-title{
+      color:#fff;font-size:30px;font-weight:800;
+      letter-spacing:-.03em;margin-top:20px;
+    }
+    .result-msg{
+      color:rgba(255,255,255,.92);font-size:15px;
+      max-width:340px;line-height:1.55;margin-top:6px;
+    }
+    .result-card{
+      background:rgba(255,255,255,.18);
+      border:1px solid rgba(255,255,255,.28);
+      border-radius:20px;padding:18px 24px;color:#fff;
+      width:100%;max-width:340px;margin-top:22px;
+    }
+    .result-card .amt{font-size:36px;font-weight:800;letter-spacing:-.04em}
+    .result-card .nm {font-size:15px;font-weight:650;margin-top:3px}
+    .result-card .rs {font-size:13px;opacity:.85;margin-top:2px}
+    .result-card .meta{font-size:11px;opacity:.65;margin-top:8px;font-family:ui-monospace,monospace}
+
+    .result-btn{
+      margin-top:28px;padding:16px 44px;border-radius:16px;border:none;
+      background:#fff;color:#1a1140;font-weight:750;font-size:16px;
+      cursor:pointer;box-shadow:0 12px 30px -10px rgba(0,0,0,.4);
+      transition:transform .15s ease;
+    }
+    .result-btn:active{transform:scale(.97)}
   </style>
 </head>
 <body>
 
 <h2>Scan Coupon</h2>
-<div id="video-wrap">
-  <video id="video" playsinline muted autoplay></video>
-  <div id="overlay"><span></span></div>
+
+<div id="stage">
+  <div id="video-wrap">
+    <video id="video" playsinline muted autoplay></video>
+    <div id="overlay"><span></span></div>
+  </div>
+  <p id="message" class="info">Starting camera…</p>
+  <p id="status">Point the camera at the QR code — full frame is scanned</p>
+  <div id="debug"></div>
 </div>
-<p id="message" class="info">Starting camera…</p>
-<p id="status">Point the camera at the QR code — full frame is scanned</p>
-<div id="result"></div>
-<div id="debug"></div>
+
+<!-- Full-screen result overlay -->
+<div id="resultScreen">
+  <div class="result-ico" id="resultIco">✓</div>
+  <div class="result-title" id="resultTitle">Redeemed!</div>
+  <div class="result-msg" id="resultMsg">Coupon marked as used.</div>
+  <div class="result-card" id="resultCard" style="display:none;">
+    <div class="amt" id="resultAmt"></div>
+    <div class="nm"  id="resultName"></div>
+    <div class="rs"  id="resultReason"></div>
+    <div class="meta" id="resultMeta"></div>
+  </div>
+  <button class="result-btn" id="scanNextBtn">Scan Next Coupon</button>
+</div>
 
 <script>
 // ================================================================
-// ⚠️ CONFIG — change these two values to match your setup
+// ⚠️ CONFIG — must match Code.gs exactly
 // ================================================================
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/thebigcarrot.ca/s/AKfycbyNfMFI5Oims_2q5NIlIyFZtxiQryu2nkdT9Hw3D995sQ74yN0Gjk3NqOdiWeUrSanfcA/exec';
 const API_SECRET      = 'ecp-live-9f4K2pQ8xW7nH3jM5tR6vY1bL0dN4sA';
 // ================================================================
 
-const video    = document.getElementById('video');
-const messageEl = document.getElementById('message');
-const statusEl  = document.getElementById('status');
-const debugEl   = document.getElementById('debug');
-const resultEl  = document.getElementById('result');
+const video        = document.getElementById('video');
+const messageEl    = document.getElementById('message');
+const statusEl     = document.getElementById('status');
+const debugEl      = document.getElementById('debug');
+const resultScreen = document.getElementById('resultScreen');
+const resultIco    = document.getElementById('resultIco');
+const resultTitle  = document.getElementById('resultTitle');
+const resultMsg    = document.getElementById('resultMsg');
+const resultCard   = document.getElementById('resultCard');
+const resultAmt    = document.getElementById('resultAmt');
+const resultName   = document.getElementById('resultName');
+const resultReason = document.getElementById('resultReason');
+const resultMeta   = document.getElementById('resultMeta');
+const scanNextBtn  = document.getElementById('scanNextBtn');
 
-let isProcessing = false;
-let scanLoopId   = null;
+// --- scanner state ---
+let scanLoopId      = null;
 let barcodeDetector = null;
+let canvas          = null;
+let ctx             = null;
+let cameraStream    = null;
+let lastScannedCode = null;
+let lastScannedAt   = 0;
 
 function setMessage(text, type) {
   messageEl.textContent = text;
@@ -95,17 +172,13 @@ function debug(text) {
   debugEl.textContent = text ? String(text).slice(0, 200) : '';
   if (text) console.log('[ECP]', text);
 }
-function showResult(coupon) {
-  if (!coupon) return;
-  resultEl.style.display = 'block';
-  resultEl.innerHTML =
-    '<div class="amt">$' + Number(coupon.amount).toFixed(2).replace(/\.00$/, '') + '</div>' +
-    '<div class="nm">' + (coupon.name || '') + '</div>' +
-    '<div class="rs">' + (coupon.reason || '') + '</div>';
+function money(n) {
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 // ================================================================
-// 1. START CAMERA
+// CAMERA
 // ================================================================
 async function startCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -114,7 +187,7 @@ async function startCamera() {
     return;
   }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
         width:  { ideal: 1280 },
@@ -122,9 +195,10 @@ async function startCamera() {
       },
       audio: false
     });
-    video.srcObject = stream;
+    video.srcObject = cameraStream;
     await video.play();
     setMessage('Ready — point at the QR', 'info');
+    statusEl.textContent = 'Full frame is scanned';
     startScanLoop();
   } catch (err) {
     console.error(err);
@@ -134,29 +208,33 @@ async function startCamera() {
 }
 
 // ================================================================
-// 2. SCAN LOOP
+// SCAN LOOP (stops completely once a code is detected)
 // ================================================================
 async function startScanLoop() {
-  // Try native BarcodeDetector first (iOS 17+, Android Chrome — near-instant)
-  if ('BarcodeDetector' in window) {
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  }
+
+  // Try native BarcodeDetector first
+  if (!barcodeDetector && 'BarcodeDetector' in window) {
     try {
       const fmts = await BarcodeDetector.getSupportedFormats();
       if (fmts.includes('qr_code')) {
         barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
         debug('BarcodeDetector active');
       }
-    } catch (e) { /* fall back to jsQR */ }
+    } catch (e) { /* fall back */ }
   }
   if (!barcodeDetector) debug('Using jsQR fallback');
 
-  const canvas = document.createElement('canvas');
-  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  // Cancel any previous loop
+  if (scanLoopId) {
+    cancelAnimationFrame(scanLoopId);
+    scanLoopId = null;
+  }
 
   const tick = async () => {
-    if (isProcessing) {
-      scanLoopId = requestAnimationFrame(tick);
-      return;
-    }
     if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
       let code = null;
       try {
@@ -176,27 +254,41 @@ async function startScanLoop() {
         }
       } catch (e) { debug('scan err: ' + e.message); }
 
-      if (code) {
-        debug('Detected: ' + code);
-        if (code.indexOf('ECP-') === 0) {
-          isProcessing = true;
-          setMessage('Found — redeeming…', 'info');
-          try { await redeemToken(code.trim()); }
-          finally { isProcessing = false; }
-          scanLoopId = requestAnimationFrame(tick);
-          return;
+      if (code && code.indexOf('ECP-') === 0) {
+        // ---- COOLDOWN: ignore the same code for 3s after a scan ----
+        const now = Date.now();
+        if (code === lastScannedCode && now - lastScannedAt < 3000) {
+          // still cooling down — keep looping without acting on it
         } else {
-          debug('Ignored non-ECP QR');
+          lastScannedCode = code;
+          lastScannedAt   = now;
+
+          // 🛑 STOP THE LOOP HARD — no more scans until user taps "Scan Next"
+          stopScanLoop();
+          setMessage('Found — redeeming…', 'info');
+          statusEl.textContent = 'Please wait…';
+
+          // Redeem, then show persistent result
+          redeemToken(code.trim());
+          return; // exits tick — loop is dead
         }
       }
     }
     scanLoopId = requestAnimationFrame(tick);
   };
+
   tick();
 }
 
+function stopScanLoop() {
+  if (scanLoopId) {
+    cancelAnimationFrame(scanLoopId);
+    scanLoopId = null;
+  }
+}
+
 // ================================================================
-// 3. REDEEM via JSONP
+// JSONP REDEEM
 // ================================================================
 function jsonpRedeem(token) {
   return new Promise((resolve, reject) => {
@@ -245,44 +337,129 @@ function jsonpRedeem(token) {
   });
 }
 
-async function redeemToken(token) {
-  try {
-    setMessage('Redeeming…', 'info');
-    const data = await jsonpRedeem(token);
+// ================================================================
+// SHOW RESULT — always stops and waits for user action
+// ================================================================
+function showResultScreen(type, title, msg, coupon, meta) {
+  resultScreen.className = type; // 'ok' or 'err'
+  resultScreen.classList.add('on');
 
-    if (data.ok) {
-      setMessage('✅ Redeemed!', 'success');
-      showResult(data.coupon);
-      if (navigator.vibrate) navigator.vibrate(200);
-      setTimeout(() => {
-        resultEl.style.display = 'none';
-        setMessage('Ready — point at the QR', 'info');
-      }, 4000);
-    } else if (data.code === 'ALREADY_USED') {
-      setMessage('❌ ' + (data.message || 'Already used'), 'error');
-      showResult(data.coupon);
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setTimeout(() => {
-        resultEl.style.display = 'none';
-        setMessage('Ready — point at the QR', 'info');
-      }, 4000);
-    } else {
-      setMessage('❌ ' + (data.message || 'Invalid'), 'error');
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setTimeout(() => setMessage('Ready — point at the QR', 'info'), 3000);
-    }
-  } catch (err) {
-    if (err.message === 'TIMEOUT') {
-      setMessage('⚠️ Server timeout', 'error');
-      debug('Check that doGet is deployed and access is "Anyone".');
-    } else {
-      setMessage('⚠️ Network error', 'error');
-      debug('Script load failed. Check the /exec URL and deployment access.');
-    }
-    setTimeout(() => setMessage('Ready — point at the QR', 'info'), 3000);
+  resultIco.textContent   = type === 'ok' ? '✓' : '✕';
+  resultTitle.textContent = title;
+  resultMsg.textContent   = msg || '';
+
+  if (coupon) {
+    resultCard.style.display = 'block';
+    resultAmt.textContent    = money(coupon.amount);
+    resultName.textContent   = coupon.name || '';
+    resultReason.textContent = coupon.reason || '';
+    resultMeta.textContent   = meta || '';
+  } else {
+    resultCard.style.display = 'none';
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate(type === 'ok' ? 200 : [100, 50, 100]);
   }
 }
 
+function hideResultScreen() {
+  resultScreen.classList.remove('on');
+  resultScreen.className = '';
+}
+
+async function redeemToken(token) {
+  try {
+    const data = await jsonpRedeem(token);
+
+    if (data.ok) {
+      showResultScreen(
+        'ok',
+        'Redeemed!',
+        'Coupon marked as used. It cannot be reused.',
+        data.coupon,
+        data.coupon ? data.coupon.token : ''
+      );
+    } else if (data.code === 'ALREADY_USED') {
+      showResultScreen(
+        'err',
+        'Already Redeemed',
+        'This coupon has already been used. Do not accept it again.',
+        data.coupon,
+        data.coupon && data.coupon.redeemedAt
+          ? 'Redeemed ' + new Date(data.coupon.redeemedAt).toLocaleString('en-US')
+          : ''
+      );
+    } else if (data.code === 'EXPIRED') {
+      showResultScreen(
+        'err',
+        'Coupon Expired',
+        data.message || 'This coupon is past its expiry date.',
+        data.coupon,
+        data.coupon && data.coupon.expiresAt
+          ? 'Expired ' + new Date(data.coupon.expiresAt).toLocaleDateString('en-US')
+          : ''
+      );
+    } else if (data.code === 'VOID') {
+      showResultScreen(
+        'err',
+        'Coupon Cancelled',
+        'This coupon has been voided by an administrator.',
+        data.coupon,
+        ''
+      );
+    } else {
+      showResultScreen(
+        'err',
+        'Invalid Coupon',
+        data.message || 'This coupon was not recognized.',
+        data.coupon,
+        ''
+      );
+    }
+  } catch (err) {
+    if (err.message === 'TIMEOUT') {
+      showResultScreen(
+        'err',
+        'Server Timeout',
+        'The server did not respond. Check the connection and try again.',
+        null,
+        ''
+      );
+      debug('Check that doGet is deployed and access is "Anyone".');
+    } else {
+      showResultScreen(
+        'err',
+        'Network Error',
+        'Could not reach the server. Verify the scanner URL and try again.',
+        null,
+        ''
+      );
+      debug('Script load failed. Check /exec URL + deployment access.');
+    }
+  }
+}
+
+// ================================================================
+// RESET AND SCAN AGAIN
+// ================================================================
+function resetAndScan() {
+  hideResultScreen();
+  setMessage('Ready — point at the QR', 'info');
+  statusEl.textContent = 'Full frame is scanned';
+  debug('');
+
+  // Give the cooldown a moment to expire, then restart the loop
+  setTimeout(() => {
+    startScanLoop();
+  }, 350);
+}
+
+scanNextBtn.addEventListener('click', resetAndScan);
+
+// ================================================================
+// BOOT
+// ================================================================
 window.addEventListener('DOMContentLoaded', startCamera);
 </script>
 </body>
