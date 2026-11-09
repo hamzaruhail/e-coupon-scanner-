@@ -16,7 +16,6 @@
       overflow-x: hidden;
     }
 
-    /* ================= SCREEN SYSTEM ================= */
     .screen {
       display: none;
       min-height: 100vh;
@@ -92,7 +91,7 @@
     }
 
     /* ================= SCAN ================= */
-    #scanScreen {
+    #scanningScreen {
       background: #000;
       padding: 0;
       justify-content: flex-start;
@@ -281,11 +280,11 @@
     <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
     Open Scanner
   </button>
-  <div class="version-badge">v3.0 · Nov 2026</div>
+  <div class="version-badge">v3.1 · Nov 2026</div>
 </div>
 
-<!-- ========== SCREEN 2: SCANNING ========== -->
-<div id="scanScreen" class="screen">
+<!-- ========== SCREEN 2: SCANNING (id fixed to match code) ========== -->
+<div id="scanningScreen" class="screen">
   <div class="scan-header">
     <h2>Scanning Coupon</h2>
     <p>Point the camera at the QR code</p>
@@ -321,8 +320,8 @@
 // ================================================================
 // ⚠️ CONFIG — must match Code.gs
 // ================================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/thebigcarrot.ca/s/AKfycbyNfMFI5Oims_2q5NIlIyFZtxiQryu2nkdT9Hw3D995sQ74yN0Gjk3NqOdiWeUrSanfcA/exec';
-const API_SECRET      = 'ecp-live-9f4K2pQ8xW7nH3jM5tR6vY1bL0dN4sA';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+const API_SECRET      = 'CHANGE_ME_TO_A_LONG_RANDOM_STRING_2024';
 // ================================================================
 
 const video        = document.getElementById('video');
@@ -337,8 +336,7 @@ const resultName   = document.getElementById('resultName');
 const resultReason = document.getElementById('resultReason');
 const resultMeta   = document.getElementById('resultMeta');
 
-// ---- Core state ----
-let appState        = 'landing';  // 'landing' | 'scanning' | 'result'
+let appState        = 'landing';
 let cameraStream    = null;
 let scanLoopId      = null;
 let barcodeDetector = null;
@@ -352,7 +350,12 @@ function debug(msg) {
 
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
-  document.getElementById(name + 'Screen').classList.add('on');
+  const el = document.getElementById(name + 'Screen');
+  if (!el) {
+    console.error('[ECP] Screen element not found:', name + 'Screen');
+    return;
+  }
+  el.classList.add('on');
   appState = name;
   window.scrollTo(0, 0);
 }
@@ -366,9 +369,9 @@ function money(n) {
 // CAMERA
 // ================================================================
 async function openCamera() {
-  if (cameraStream) return; // already running
+  if (cameraStream) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Camera not supported on this browser');
+    throw new Error('Camera not supported. Use HTTPS in Safari or Chrome.');
   }
   cameraStream = await navigator.mediaDevices.getUserMedia({
     video: {
@@ -391,7 +394,7 @@ function closeCamera() {
 }
 
 // ================================================================
-// SCAN LOOP — guarded by state
+// SCAN LOOP
 // ================================================================
 async function startScanLoop() {
   if (appState !== 'scanning') return;
@@ -408,14 +411,13 @@ async function startScanLoop() {
         barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
         debug('BarcodeDetector active');
       }
-    } catch (e) { /* jsQR fallback */ }
+    } catch (e) { /* fallback */ }
   }
   if (!barcodeDetector) debug('jsQR mode');
 
   cancelScanLoop();
 
   const tick = async () => {
-    // HARD GUARD — never scan when not on scan screen
     if (appState !== 'scanning') return;
 
     if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
@@ -437,11 +439,9 @@ async function startScanLoop() {
         }
       } catch (e) { /* ignore */ }
 
-      // Guard again after async detection
       if (appState !== 'scanning') return;
 
       if (code && code.indexOf('ECP-') === 0) {
-        // 🔴 STOP EVERYTHING synchronously, then show result
         cancelScanLoop();
         if (navigator.vibrate) navigator.vibrate(80);
         debug('Found: ' + code);
@@ -466,21 +466,25 @@ function cancelScanLoop() {
 }
 
 // ================================================================
-// FLOW: LANDING → SCAN
+// FLOW: LANDING → SCANNING
 // ================================================================
 document.getElementById('startBtn').addEventListener('click', async () => {
-  switchScreen('scanning');
   try {
+    switchScreen('scanning');
     await openCamera();
     startScanLoop();
   } catch (err) {
-    alert('Could not open camera: ' + err.message);
+    console.error('[ECP] Camera error:', err);
+    cancelScanLoop();
+    closeCamera();
     switchScreen('landing');
+    alert('Could not open camera.\n\n' + (err.message || err.name || 'Unknown error') +
+          '\n\nPlease make sure:\n• You granted camera permission\n• You are on HTTPS (github.io)\n• Your browser supports camera access');
   }
 });
 
 // ================================================================
-// FLOW: SCAN → LANDING (Stop)
+// FLOW: SCANNING → LANDING (Stop)
 // ================================================================
 document.getElementById('stopBtn').addEventListener('click', () => {
   cancelScanLoop();
@@ -539,10 +543,10 @@ function jsonpRedeem(token) {
 }
 
 // ================================================================
-// REDEEM → RESULT SCREEN
+// REDEEM → RESULT
 // ================================================================
 async function redeemAndShowResult(token) {
-  // 🚀 IMMEDIATELY switch to result screen — BEFORE any await
+  // Switch to result screen IMMEDIATELY (before network call)
   resultScreen.classList.remove('ok', 'err');
   resultScreen.classList.add('ok');
   resultIco.textContent    = '⏳';
@@ -619,22 +623,25 @@ function showResult(type, icon, title, msg, coupon, meta) {
 }
 
 // ================================================================
-// FLOW: RESULT → SCAN (Scan Next)
+// RESULT → SCANNING (Scan Next)
 // ================================================================
 document.getElementById('scanNextBtn').addEventListener('click', async () => {
-  resultScreen.classList.remove('ok', 'err');
-  switchScreen('scanning');
   try {
+    resultScreen.classList.remove('ok', 'err');
+    switchScreen('scanning');
     await openCamera();
     startScanLoop();
   } catch (err) {
-    alert('Camera error: ' + err.message);
+    console.error('[ECP] Camera error:', err);
+    cancelScanLoop();
+    closeCamera();
     switchScreen('landing');
+    alert('Camera error: ' + (err.message || err.name));
   }
 });
 
 // ================================================================
-// FLOW: RESULT → LANDING (Done)
+// RESULT → LANDING (Done)
 // ================================================================
 document.getElementById('doneBtn').addEventListener('click', () => {
   resultScreen.classList.remove('ok', 'err');
